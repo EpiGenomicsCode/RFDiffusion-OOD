@@ -1,162 +1,127 @@
-# ICDS-Roar-OOD Protein Structure Prediction
+# RFdiffusion Open OnDemand Application
 
 ## Description
-This project provides a web-based interface for running protein structure prediction jobs using AlphaFold 2 and AlphaFold 3 on the ICDS Roar cluster via Open OnDemand v3. The app simplifies the process of submitting and monitoring AlphaFold jobs by providing a user-friendly interface and automated job management.
+Web interface for protein design using RFdiffusion on HPC clusters. Enables:
+- De novo protein generation
+- Motif scaffolding
+- Binder design
+- Symmetric oligomer generation
+- Partial diffusion workflows
 
 ## Features
 
-### Multiple Prediction Engines
-- **AlphaFold 2**:
-  - Supports AlphaFold v2.3.2 for protein structure prediction
-  - Handles both monomer and multimer predictions
-  - Uses full database configuration for maximum accuracy
-  - Automated MSA generation and template search
+### Core Capabilities
+- **Five Design Modes**:
+  - **Binder Design**: Create protein binders with specified interfaces
+  - **Motif Scaffolding**: Scaffold functional motifs into stable structures
+  - **Partial Diffusion**: Controlled generation with adjustable noise steps
+  - **Unconditional Generation**: Fully automated protein design
+  - **Symmetric Design**: Generate symmetric protein assemblies
 
-- **AlphaFold 3** (New!):
-  - Latest version of AlphaFold with improved accuracy
-  - Supports protein-protein, protein-DNA/RNA, and protein-ligand complexes
-  - Enhanced diffusion-based structure prediction
-  - Requires acceptance of Google's terms of service
+### Advanced Functionality
+- **Hotspot Residue Specification**: Paint key interaction residues
+- **Fold Conditioning**: Guide generation with structural constraints
+- **Auxiliary Potentials**: Incorporate energy-based guidance
+- **Inpainting**: Combine sequence/structure constraints
+- **Flexible Peptide Handling**: Design with dynamic binding partners
 
-### Job Management
-- **Two-phase execution**:
-  - CPU phase for MSA/templates
-  - GPU phase for prediction (set as a dependency)
-- **Real-time job status monitoring**
-- **Detailed progress tracking**
-- **Automatic error handling and recovery**
+## System Requirements
 
-### User Interface
-- **Flexible Input Formats**:
-  - FASTA sequence input for AlphaFold 2
-  - JSON format input for AlphaFold 3 (following [official specifications](https://github.com/google-deepmind/alphafold3/blob/main/docs/input.md))
-- **GPU allocation selection**
-- **Working directory customization**
-- **Real-time progress visualization**
-- **Direct access to output files**
+### Hardware
+- NVIDIA GPU (A100/V100 recommended)
+- 60GB+ GPU memory
+- 100GB+ temporary storage
 
-### Output Files
-- **AlphaFold 2**:
-  - PDB structure files (ranked by confidence)
-  - Multiple Sequence Alignment (MSA) files
-  - Detailed prediction metrics and confidence scores
-  - Comprehensive log files
-
-- **AlphaFold 3**:
-  - CIF structure files
-  - Ranking scores for multiple predictions
-  - Detailed model outputs and metrics
-  - Complete execution logs
-
-## Prerequisites
-
-### Database Setup
-Both AlphaFold versions require genetic databases that must be set up before using the app:
-- AlphaFold 2: Download using script from [AlphaFold 2 repository](https://github.com/google-deepmind/alphafold)
-- AlphaFold 3: Additional databases required. Setup instructions available [here](https://github.com/google-deepmind/alphafold3/blob/main/docs/installation.md)
-
-### Singularity Containers
-The app uses Singularity containers for execution:
-- AlphaFold 2: Download from [Sylabs](https://cloud.sylabs.io/library/prehensilecode/alphafold_singularity/alphafold)
-- AlphaFold 3: Requires official container from Google (subject to terms of use). Weights needed for running AlphaFold 3 have to be requested from Google [here](https://docs.google.com/forms/d/e/1FAIpQLSfWZAgo1aYk0O4MuAXZj8xRQ8DafeFJnldNOnh_13qAx2ceZw/viewform)
+### Software
+- Singularity 3.7+
+- CUDA 11.6
+- Python 3.9
+- SE(3)-Transformer
 
 ## Installation
 
-1. Clone this repository into your Open OnDemand apps directory
-2. Configure paths in `template/alphafold_env.sh`
-3. Ensure all required databases are properly set up
-4. Verify GPU compute capabilities.
+1. **Clone Repository**:
+```bash
+git clone https://github.com/EpiGenomicsCode/RFDiffusion-OOD.git
+cd RFDiffusion-OOD
+```
+2. **Retrieve Singularity Container From ICDS**:
+```bash
+rsync -avP path/torfdiffusion_container.sif .
+```
 
 ## Usage
 
-1. Access the Open OnDemand dashboard
-2. Navigate to "Interactive Apps"
-3. Select "Protein Structure Prediction"
-4. Choose prediction engine (AlphaFold 2 or 3)
-5. Fill out the form:
-   - For AlphaFold 2: Enter protein sequence in FASTA format
-   - For AlphaFold 3: Provide input in JSON format
-   - Select GPU allocation
-   - Choose working directory
-6. Accept terms of service (required for AlphaFold 3)
-7. Submit the job
+### Web Interface
+1. Access Open OnDemand portal
+2. Navigate to "RFdiffusion Protein Design"
+3. Configure parameters:
+   - **Design Mode**: Select workflow type
+   - **Input Structure**: Upload PDB (if required)
+   - **Design Parameters**:
+     - Number of designs (1-100)
+     - Diffusion timesteps (20-200)
+     - Symmetry type (if applicable)
+     - Potential guidance (optional)
 
-### Input Format Examples
+4. Submit job through interactive form
 
-#### AlphaFold 2 (FASTA)
-The app accepts protein sequences in FASTA format.
-
-Example:
-```
->sequence_name
-MVKVGVNGFGRIGRLVTRAAFNSGKVDIVAINDPFIDLNYMVYMFQYDSTHGKFHGTVKA
-ENGKLVINGNPITIFQERDPSKIKWGDAGAEYVVESTGVFTTMEKAGAHLQGGAKRVIIS
-```
-
-#### AlphaFold 3 (JSON) 
-
-```
-{
-"name": "example_complex",
-"sequences": [
-{
-"protein": {
-"id": "protein_chain_A",
-"sequence": "MVKVGVNG..."
-}
-}
-],
-"modelSeeds": [1, 2, 3]
-}
+### Command Line Options
+Example scaffolded binder design:
+```bash
+./scripts/run_inference.py \
+  inference.input_pdb=input.pdb \
+  inference.output_prefix=outputs/binder_design \
+  scaffoldguided.scaffoldguided=True \
+  'ppi.hotspot_res=[A59,A83,A91]' \
+  inference.num_designs=10 \
+  denoiser.noise_scale_ca=0
 ```
 
+Common parameters:
+- `contigmap.contigs`: Structural constraints
+- `potentials.guiding_potentials`: Energy guidance
+- `symmetry.symmetry_type`: Assembly symmetry
+- `partial_diffusion.partial_T`: Noise steps
 
-### Output Files
-The app generates the following output structure:
-
+## Output Structure
 ```
-working_directory/
-└── run_YYYYMMDD_HHMMSS/
-├── input/
-│ ├── [structure files] # Predicted structures
-│ ├── [prediction data] # Detailed predictions
-│ └── msas/ # Multiple sequence alignments
-├── logs/ # Job logs
-├── CPU-SLURM/ # CPU phase files
-└── GPU-SLURM/ # GPU phase files
+working_dir/
+├── inputs/              # Uploaded PDB files
+├── outputs/
+│   ├── designs/         # Generated PDB structures
+│   ├── scores/          # Design metrics
+│   └── visualizations/  # 3D previews
+├── logs/
+│   ├── diffusion.log    # Full process log
+│   └── status.json      # Progress tracking
+└── schedules/           # Diffusion cache
 ```
 
-
-## Monitoring Jobs
-The app provides real-time monitoring of:
-- MSA generation progress
-- Template search status
-- Structure prediction progress
-- Model relaxation status
+## Monitoring
+Real-time tracking includes:
+- Diffusion progress
+- Energy landscape exploration
+- Structural validation metrics
+- Resource utilization
 
 ## Troubleshooting
-Common issues and solutions:
 
-1. Job fails in CPU phase:
-   - Check available disk space
-   - Verify database paths
-   - Examine CPU phase logs
-
-2. GPU phase errors:
-   - Verify GPU allocation
-   - Check memory requirements
-   - Review GPU phase logs
-   - For AlphaFold 3: Ensure GPU compute availability. 
+| Issue | Solution |
+|-------|----------|
+| CUDA OOM | Reduce `num_designs` or use simpler contigs |
+| Invalid PDB | Verify input structure with `pdb-tools` |
+| Symmetry failures | Check symmetry parameters match input |
+| Potential guidance conflicts | Adjust potential weights |
 
 ## License
-This project is licensed under the MIT License.
+MIT License
 
 ## Acknowledgements
-- AlphaFold by DeepMind Technologies Limited
-- Singularity container by prehensilecode
-- The research project is generously funded by Cornell University BRC Epigenomics Core Facility (RRID:SCR_021287), Penn State Institute for Computational and Data Sciences (RRID:SCR_025154) and Penn State University Center for Applications of Artificial Intelligence and Machine Learning to Industry Core Facility (RRID:SCR_022867)
+- RFdiffusion by Rosetta Commons
+- NVIDIA SE3-Transformer
+- This project is generously funded by Cornell University BRC Epigenomics Core Facility (RRID:SCR_021287), Penn State Institute for Computational and Data Sciences (RRID:SCR_025154) and Penn State University Center for Applications of Artificial Intelligence and Machine Learning to Industry Core Facility (RRID:SCR_022867)
 
 ## Contact
-For questions or issues, please contact:
-- Technical support: vinaysmathew@psu.edu
-- ICDS support: icds@psu.edu
+- Technical Support: [icds-help@psu.edu](mailto:icds-help@psu.edu)
+- Application Maintainer: [vvm5242@psu.edu](mailto:vvm5242@psu.edu)
