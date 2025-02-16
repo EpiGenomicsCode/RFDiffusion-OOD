@@ -16,7 +16,7 @@ declare -A gpu_progress_table
 # Common progress markers
 gpu_progress_table["Starting inference"]="0:Starting RFdiffusion <%= context.design_mode.titleize %>"
 gpu_progress_table["Running model"]="10:Loading model weights"
-gpu_progress_table@"Initializing diffusion parameters"]="20:Initializing diffusion"
+gpu_progress_table["Initializing diffusion parameters"]="20:Initializing diffusion"
 gpu_progress_table["Processing input PDB"]="30:Processing input structure"
 gpu_progress_table["Generating symmetric oligomer"]="40:Generating symmetry"
 gpu_progress_table["Applying fold conditioning"]="50:Applying fold constraints"

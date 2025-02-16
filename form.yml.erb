@@ -3,6 +3,7 @@ title: "RFdiffusion Protein Design"
 cluster: "rc"
 
 form:
+  - session_type
   - design_mode
   - auto_accounts
   - working_directory
@@ -12,6 +13,11 @@ form:
   - bc_email_on_started
 
 attributes:
+  session_type:
+    value: "RFdiffusion"
+    widget: hidden_field
+    cacheable: false
+
   design_mode:
     label: "Design Mode"
     help: "Select the protein design mode"
@@ -39,9 +45,10 @@ attributes:
   pdb_structure:
     widget: file_field
     label: "Input PDB Structure"
-    help: "<%= context.design_mode == 'unconditional' ? 'Not required for unconditional generation' : 'Required PDB file input' %>"
+    help: "Required PDB file input for all modes except unconditional generation"
     data-hide-design-mode: "unconditional"
-    required: !<%= context.design_mode == 'unconditional' %>
+    required: false
+    data-required-unless-mode: "unconditional"
 
   num_designs:
     widget: number_field
@@ -154,4 +161,12 @@ attributes:
         max: 200
         value: 50
         help: "Number of noise steps for partial diffusion"
+
+  protein_sequence:
+    label: "Protein Sequence"
+    widget: text_area
+    help: "Input sequence for unconditional generation (e.g. ACDEFGHIKLMNPQRSTVWY)"
+    rows: 3
+    data-show-design-mode: "unconditional"
+    placeholder: "Enter amino acid sequence (20+ residues)"
   

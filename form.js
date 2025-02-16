@@ -7,6 +7,9 @@ $(document).ready(function() {
   $('#batch_connect_session_context_design_mode').closest('.form-group').after(modeOptionsContainer);
   form.prepend(errorContainer);
 
+  // Add enctype for file uploads
+  form.attr('enctype', 'multipart/form-data');
+
   function displayError(message) {
     errorContainer.text(message).show();
   }
@@ -186,23 +189,38 @@ $(document).ready(function() {
     return true;
   }
 
+  function updateRequiredFields() {
+    const mode = $('#batch_connect_session_context_design_mode').val();
+    
+    // Handle PDB structure requirement
+    const pdbField = $('#batch_connect_session_context_pdb_structure');
+    if (pdbField.length) {
+      const isRequired = mode !== 'unconditional';
+      pdbField.prop('required', isRequired);
+      pdbField.closest('.form-group').toggleClass('required', isRequired);
+    }
+  }
+
   // Event handlers
   $('#batch_connect_session_context_design_mode').change(function() {
     updateModeSpecificOptions();
+    updateRequiredFields();
   });
 
   form.on('submit', function(event) {
     hideError();
     const designMode = $('#batch_connect_session_context_design_mode').val();
     
-    // Validate PDB file for non-unconditional modes
+    // Enhanced PDB file validation
     if (designMode !== 'unconditional') {
-      const pdbFile = $('#batch_connect_session_context_pdb_structure').val();
-      if (!pdbFile) {
+      const pdbFileInput = $('#batch_connect_session_context_pdb_structure')[0];
+      if (!pdbFileInput.files || pdbFileInput.files.length === 0) {
         event.preventDefault();
         displayError('PDB structure is required for ' + designMode + ' mode');
+        pdbFileInput.closest('.form-group').addClass('has-error');
         return;
       }
+      pdbFileInput.closest('.form-group').removeClass('has-error');
     }
 
     // New validations
@@ -250,8 +268,15 @@ $(document).ready(function() {
   
   // Auto-enable active site model for small motifs
   $('#batch_connect_session_context_pdb_structure').change(function() {
-    const file = this.files[0];
-    if (file) {
+    const fileInput = $(this);
+    const fileName = fileInput[0].files[0]?.name || 'No file selected';
+    const fileDisplay = $('<small class="form-text text-muted file-feedback"></small>').text(fileName);
+    
+    // Remove any existing file feedback
+    fileInput.closest('.form-group').find('.file-feedback').remove();
+    fileInput.closest('.form-group').append(fileDisplay);
+
+    if (fileInput[0].files[0]) {
       // This is a placeholder - you'd need to actually parse the PDB file
       // to determine the number of residues
       const numResidues = 15; // Example value
@@ -268,4 +293,7 @@ $(document).ready(function() {
     // Toggle potentials availability
     $('#use_potentials').closest('.form-group').toggle(['symmetric','scaffold','binder'].includes(mode));
   });
+
+  // Initialize on page load
+  updateRequiredFields();
 });

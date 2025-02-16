@@ -19,10 +19,35 @@ scontrol update jobid=$SLURM_JOBID MailType=ALL
 
 # RFdiffusion
 export PDB_FILE="${INPUT_DIR}/input.pdb"
-echo '<%= context.protein_sequence.to_s %>' > "${PDB_FILE}"
-echo "Debug: Created PDB file at ${PDB_FILE}"
+
+# Handle input based on design mode
+<% if context.design_mode == 'unconditional' %>
+echo '<%= context.protein_sequence %>' > "${PDB_FILE}"
+<% else %>
+cp "<%= context.pdb_structure.path %>" "${PDB_FILE}"
+<% end %>
 
 echo "Starting RFdiffusion process"
 source ./rfdiffusion.sh "${PDB_FILE}" "$WORKINGDIR" "<%= context.auto_accounts %>" "$STATUS_FILE"
+
+# Set parameters from form context
+export NUM_DESIGNS=<%= context.num_designs %>
+export TIMESTEPS=<%= context.timesteps %>
+export DESIGN_MODE="<%= context.design_mode %>"
+
+# Set diffusion parameters based on design mode
+<%- case context.design_mode -%>
+<%- when 'binder' -%>
+export DIFFUSION_PARAMS="binder.protein_binder=True"
+<%- when 'scaffold' -%> 
+export DIFFUSION_PARAMS="scaffoldguided.scaffoldguided=True"
+<%- when 'partial' -%>
+export DIFFUSION_PARAMS="partial_diffusion.partial_T=$((<%= context.timesteps %>/2))"
+<%- when 'symmetric' -%>
+export DIFFUSION_PARAMS="symmetry.symmetry_type=<%= context.symmetry_type %>"
+<%- else -%>
+export DIFFUSION_PARAMS="contigmap.contigs=[100-100]"
+<%- end -%>
+
 
 <%- end -%>

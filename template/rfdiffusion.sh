@@ -1,8 +1,10 @@
-#script to run rfdiffusion design
+#!/bin/bash
+PDB_FILE=$1
+WORKINGDIR=$2
+ACCOUNT=$3
+STATUS_FILE=$4
 
-#load modules
-module load anaconda/3
-module load singularity/3.7.1
+#script to run rfdiffusion design
 
 export DIFFUSION_SIF="/storage/group/u1o/alphafold/vvm5242/rfdiffusion.sif"
 export DIFFUSION_LOG_FILE="${LOGDIR}/diffusion_job.log"
@@ -28,10 +30,8 @@ singularity exec --nv \\
   --bind "/tmp" \\
   ${DIFFUSION_SIF} \\
   python3.9 /app/RFdiffusion/scripts/run_inference.py \\
-    inference.model_directory_path=/app/RFdiffusion/models \\
     inference.input_pdb=/inputs/$(basename "${PDB_FILE}") \\
     inference.output_prefix=/outputs/denovo \\
-    inference.schedule_directory_path=/schedules \\
     inference.num_designs=${NUM_DESIGNS} \\
     inference.timesteps=${TIMESTEPS} \\
     ${DIFFUSION_PARAMS}
@@ -42,7 +42,7 @@ DIFFUSION_JOB_ID=$(sbatch "${DIFFUSION_SLURM_SCRIPT}" | awk '{print $4}')
 export DIFFUSION_JOB_ID
 
 # Add mode-specific parameters
-case "<%= context.design_mode %>" in
+case "${DESIGN_MODE}" in
   "binder")
     export DIFFUSION_PARAMS+=" binder.protein_binder=True "
     ;;
@@ -50,15 +50,18 @@ case "<%= context.design_mode %>" in
     export DIFFUSION_PARAMS+=" scaffoldguided.scaffoldguided=True "
     ;;
   "partial") 
-    export DIFFUSION_PARAMS+=" partial_diffusion.partial_T=<%= context.timesteps.to_i/2 %> "
+    export DIFFUSION_PARAMS+=" partial_diffusion.partial_T=${TIMESTEPS}/2 "
     ;;
   "symmetric")
-    export DIFFUSION_PARAMS+=" symmetry.symmetry_type=<%= context.symmetry_type %> "
+    export DIFFUSION_PARAMS+=" symmetry.symmetry_type=${SYMMETRY_TYPE} "
     ;;
 esac
 
 # Add potentials if enabled
-<% if context.use_potentials == "1" %>
-export DIFFUSION_PARAMS+=" potentials.guiding_potentials=True "
-<% end %>
+if [ "${USE_POTENTIALS}" = "1" ]; then
+  export DIFFUSION_PARAMS+=" potentials.guiding_potentials=True "
+fi
+
+# Change file extension to .sh.erb and fix parameter handling
+export DIFFUSION_PARAMS="contigmap.contigs=[100-100] ppi.hotspot_res='' scaffoldguided.scaffoldguided=False ${DIFFUSION_PARAMS}"
 
