@@ -1,0 +1,10 @@
+<div class="alert alert-info">
+  <strong>Job Information:</strong>
+  <ul>
+    <li><em>Time Remaining</em> is the job walltime and not actual time until completion.</li>
+    <li>The job output will be available in the specified working directory.</li>
+    <% if connect.BC_EMAIL_ON_STARTED == 1 %>
+    <li>You will receive an email when the job starts and another at completion.</li>
+    <% end %>
+  </ul>
+</div>

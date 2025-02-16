@@ -1,0 +1,6 @@
+# .gitignore
+*.code-workspace
+.DS_Store
+.env
+*.log
+tmp/

@@ -1,0 +1,157 @@
+---
+title: "RFdiffusion Protein Design"
+cluster: "rc"
+
+form:
+  - design_mode
+  - auto_accounts
+  - working_directory
+  - pdb_structure
+  - num_designs
+  - timesteps
+  - bc_email_on_started
+
+attributes:
+  design_mode:
+    label: "Design Mode"
+    help: "Select the protein design mode"
+    widget: select
+    options:
+      - ["Binder Design", "binder"]
+      - ["Motif Scaffolding", "scaffold"]
+      - ["Partial Diffusion", "partial"]
+      - ["Unconditional Generation", "unconditional"]
+      - ["Symmetric Design", "symmetric"]
+    data-dynamic-visibility: true
+
+  auto_accounts:
+    label: "GPU Account"
+    help: "Account with access to GPU resources required"
+    required: true
+
+  working_directory:
+    label: "Working Directory"
+    help: "Output files will be saved here (scratch space recommended)"
+    widget: "path_selector"
+    show_files: false
+    value: "/scratch/<%= ENV['USER'] %>"
+
+  pdb_structure:
+    widget: file_field
+    label: "Input PDB Structure"
+    help: "<%= context.design_mode == 'unconditional' ? 'Not required for unconditional generation' : 'Required PDB file input' %>"
+    data-hide-design-mode: "unconditional"
+    required: !<%= context.design_mode == 'unconditional' %>
+
+  num_designs:
+    widget: number_field
+    label: "Number of Designs"
+    help: "Number of designs to generate (1-100)"
+    min: 1
+    max: 100
+    value: 1
+    required: true
+
+  timesteps:
+    widget: number_field
+    label: "Timesteps"
+    help: "Number of diffusion timesteps (20-200)"
+    min: 20
+    max: 200
+    value: 100
+    required: true
+
+  bc_email_on_started:
+    label: "Email notifications"
+    widget: check_box
+    help: "Receive email notifications when job starts and completes"
+
+  use_potentials:
+    label: "Use Auxiliary Potentials"
+    widget: check_box
+    help: "Enable auxiliary potentials for guided protein design"
+    data-requires-mode: "symmetric,scaffold"
+    data-required-mode: "symmetric,scaffold"
+    data-enable-for: "symmetric,scaffold,binder"
+
+  potential_weights:
+    label: "Potential Weights"
+    widget: struct
+    help: "Configure weights for different potentials"
+    data-show-if: "use_potentials"
+    fields:
+      olig_contacts_intra:
+        label: "Oligomer Intra-Chain Weight"
+        widget: number_field
+        min: 0
+        max: 2
+        step: 0.1
+        value: 1.0
+      olig_contacts_inter:
+        label: "Oligomer Inter-Chain Weight"
+        widget: number_field
+        min: 0
+        max: 2
+        step: 0.1
+        value: 0.1
+
+  noise_scale:
+    label: "Noise Scale"
+    widget: struct
+    help: "Configure noise scales for translations and rotations"
+    fields:
+      ca_scale:
+        label: "Translation (CA) Scale"
+        widget: number_field
+        min: 0
+        max: 1
+        step: 0.1
+        value: 1.0
+      frame_scale:
+        label: "Rotation (Frame) Scale"
+        widget: number_field
+        min: 0
+        max: 1
+        step: 0.1
+        value: 1.0
+
+  fold_conditioning:
+    label: "Enable Fold Conditioning"
+    widget: check_box
+    help: "Use secondary structure and block adjacency conditioning"
+
+  secondary_structure:
+    widget: file_field
+    label: "Secondary Structure File"
+    help: "Upload .pt file for secondary structure conditioning"
+    data-show-if: "fold_conditioning"
+
+  block_adjacency:
+    widget: file_field
+    label: "Block Adjacency File"
+    help: "Upload .pt file for block adjacency conditioning"
+    data-show-if: "fold_conditioning"
+
+  specialized_model:
+    label: "Specialized Model"
+    widget: select
+    help: "Select a specialized model for specific design tasks"
+    options:
+      - ["Default Model", "default"]
+      - ["Active Site Model", "active_site"]
+      - ["Beta Model", "beta"]
+
+  partial_diffusion:
+    widget: struct
+    label: "Partial Diffusion Settings"
+    help: "Configure partial diffusion parameters"
+    data-show-design-mode: "partial"
+    fields:
+      partial_T:
+        label: "Noise Steps"
+        widget: number_field
+        min: 1
+        max: 200
+        value: 50
+        help: "Number of noise steps for partial diffusion"
+  

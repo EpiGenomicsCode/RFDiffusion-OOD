@@ -1,0 +1,114 @@
+# Define the associative arrays for both CPU and GPU phases
+declare -A cpu_progress_table
+declare -A gpu_progress_table
+
+# Populate the arrays with pattern strings and corresponding progress values
+<% if context.session_type == "RFdiffusion" %>
+# Mode-specific progress markers
+<%- case context.design_mode -%>
+<%- when 'binder' -%>
+  gpu_progress_table["Initializing binder constraints"]="15:Setting up binding interface"
+  gpu_progress_table["Optimizing binding energy"]="60:Optimizing binding"
+<%- when 'symmetric' -%> 
+  gpu_progress_table["Building symmetry layers"]="35:Constructing symmetry"
+<%- end -%>
+
+# Common progress markers
+gpu_progress_table["Starting inference"]="0:Starting RFdiffusion <%= context.design_mode.titleize %>"
+gpu_progress_table["Running model"]="10:Loading model weights"
+gpu_progress_table@"Initializing diffusion parameters"]="20:Initializing diffusion"
+gpu_progress_table["Processing input PDB"]="30:Processing input structure"
+gpu_progress_table["Generating symmetric oligomer"]="40:Generating symmetry"
+gpu_progress_table["Applying fold conditioning"]="50:Applying fold constraints"
+gpu_progress_table["Running diffusion steps"]="75:Running diffusion"
+gpu_progress_table["Saving output"]="90:Saving results"
+gpu_progress_table["Done processing"]="100:Design completed"
+<% end %>
+
+# Function to update job_status.json
+update_status() {
+    local progress=$1
+    local output=$2
+    local phase=$3
+    shift 3
+    local detail=("$@")
+
+    if [ ${#detail[@]} -eq 0 ]; then
+        detail_json="[]"
+    else
+        detail_json="["
+        for item in "${detail[@]}"; do
+            detail_json+="\"$item\","
+        done
+        detail_json="${detail_json%,}]"  # Remove the trailing comma and close the array
+    fi
+
+    echo "{\"progress\": \"$progress\", \"status\": \"$output\", \"phase\": \"$phase\", \"detail\": $detail_json}" | tee ${STATUS_FILE}
+}
+
+# Function to monitor log files and terminate when the SLURM job ends
+monitor_log() {
+    local logfile=$1
+    local job_id=$2
+    local phase=$3
+    local -n progress_table=$4
+
+    update_status 0 "Initializing job..." "$phase"
+
+    declare -A matched_patterns
+    local ordered_patterns=()
+
+    while true; do
+        local last_progress=""
+        local last_output=""
+
+        # Read the entire log file
+        while IFS= read -r line; do
+            for pattern in "${!progress_table[@]}"; do
+                if echo "$line" | grep -q "$pattern"; then
+                    IFS=':' read -r progress output <<< "${progress_table[$pattern]}"
+                    last_progress=$progress
+                    last_output=$output
+                    if [ -z "${matched_patterns[$output]}" ]; then
+                        matched_patterns["$output"]=1
+                        ordered_patterns+=("$output")
+                    fi
+                fi
+            done
+        done < $logfile
+
+        # Update status with the last matched state and prior matched states
+        if [[ -n $last_progress && -n $last_output ]]; then
+            update_status "$last_progress" "$last_output" "$phase" "${ordered_patterns[@]}"
+        fi
+
+        # Check if the SLURM job is still running
+        job_state=$(squeue -j $job_id -h -o %t)
+        if [ "$job_state" != "R" ]; then
+            echo "SLURM job $job_id is no longer running"
+            break
+        fi
+
+        sleep 5  # Check every 5 seconds
+    done
+}
+
+# Function to wait for SLURM job to start and log file to be created
+wait_for_job_and_log() {
+    local job_id=$1
+    local logfile=$2
+
+    update_status 0 "Waiting for job $job_id to start..." "Initializing"
+    while ! squeue -j $job_id > /dev/null 2>&1; do
+        sleep 5
+    done
+
+    echo "Waiting for log file $logfile to be created..."
+    while [ ! -f $logfile ]; do
+        sleep 5
+    done
+}
+
+# Simplified monitoring function for single GPU phase
+wait_for_job_and_log $DIFFUSION_JOB_ID $DIFFUSION_LOG_FILE
+monitor_log $DIFFUSION_LOG_FILE $DIFFUSION_JOB_ID "$SESSION_TYPE GPU Phase - Protein Design" gpu_progress_table

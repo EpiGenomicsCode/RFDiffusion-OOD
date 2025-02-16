@@ -1,0 +1,145 @@
+<% require 'json' %>
+
+<% 
+status_data = {}
+diffusion_job_id = nil
+run_dir = nil
+input_dir = nil
+struct = nil
+logdir = nil
+diffusion_log_file = nil
+
+if staged_root && File.exist?(staged_root.join('connection.yml')) 
+  diffusion_job_id = connect.DIFFUSION_JOB_ID
+  run_dir = connect.RUN_DIR
+  input_dir = connect.INPUT_DIR
+  struct = connect.STRUCT
+  logdir = connect.LOGDIR
+  diffusion_log_file = connect.DIFFUSION_LOG_FILE
+
+  # Read status.json file
+  status_file = File.join(staged_root, connect.STATUS_FILE || "")
+  status_data = JSON.parse(File.read(status_file)) if File.exist?(status_file)
+end
+
+# Extract information from status_data
+if status_data
+  progress = status_data['progress'] || 0
+  status = status_data['status'] || "Initializing"
+  phase = status_data['phase'] || "Setup"
+  details = status_data['detail'] || []
+  details_html = details.compact.map { |detail| "<li>#{detail}</li>" }.join
+end
+%>
+
+<%- if status_file && File.exist?(status_file) -%>
+  <div class="status-box">
+    <h5>Design Progress</h5>
+    <p><strong>Job ID:</strong> <%= diffusion_job_id %>
+      <a href="/pun/sys/dashboard/activejobs?jobcluster=all&jobfilter=user" class="job-link">
+        View My Jobs <i class="fa fa-external-link"></i>
+      </a>
+    </p>
+    <p><strong>Working Directory:</strong> 
+      <a href="/pun/sys/dashboard/files/fs<%= run_dir %>" target="_blank" class="directory-link">
+        <%= run_dir %>
+        <i class="fa fa-external-link"></i>
+      </a>
+    </p>
+    <div class="progress-container">
+      <p class="phase-status"><strong>Phase:</strong> <span class="phase-text"><%= phase %></span></p>
+      <div class="progress">
+        <div class="progress-bar" role="progressbar" 
+             style="width: <%= progress %>%;" 
+             aria-valuenow="<%= progress %>" 
+             aria-valuemin="0" 
+             aria-valuemax="100">
+          <%= progress %>%
+        </div>
+      </div>
+      <p class="current-step"><strong>Current Step:</strong> <%= status %></p>
+    </div>
+
+    <%- if details.any? -%>
+      <div class="progress-details">
+        <h6>Progress History:</h6>
+        <ul class="detail-list">
+          <%= details_html.html_safe %>
+        </ul>
+      </div>
+    <%- end -%>
+  </div>
+<%- end -%>
+
+<%- if diffusion_log_file && File.exist?(diffusion_log_file) -%>
+  <div class="log-box">
+    <h6>
+      <a href="/pun/sys/dashboard/files/fs<%= diffusion_log_file %>" target="_blank" class="log-link">
+        Design Process Log 
+        <i class="fa fa-external-link"></i>
+      </a>
+    </h6>
+    <div class="log-container">
+      <pre class="log-content"><%= File.read(diffusion_log_file).gsub(/</, '&lt;').gsub(/>/, '&gt;') %></pre>
+    </div>
+  </div>
+<%- end -%>
+
+<style>
+.status-box {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-container {
+  margin: 20px 0;
+}
+
+.progress {
+  height: 25px;
+  border-radius: 4px;
+  background-color: #e9ecef;
+}
+
+.progress-bar {
+  background-color: #2c7be5;
+  transition: width 0.5s ease;
+}
+
+.detail-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.log-container {
+  max-height: 400px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: white;
+}
+
+.log-content {
+  padding: 15px;
+  margin: 0;
+  font-family: Monaco, Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.job-link, .directory-link, .log-link {
+  color: #2c7be5;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.job-link:hover, .directory-link:hover, .log-link:hover {
+  color: #1b5ab3;
+}
+</style>

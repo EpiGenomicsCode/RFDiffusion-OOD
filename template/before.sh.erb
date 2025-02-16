@@ -1,0 +1,28 @@
+#!/bin/bash
+[[ $(type -t module) == "function" ]] && export -f module
+
+export WORKINGDIR="<%= context.working_directory %>"
+export BC_EMAIL_ON_STARTED="<%= context.bc_email_on_started %>"
+export SESSION_TYPE="<%= context.session_type %>"
+export CREATED_AT="<%= session.created_at %>"
+
+source "rfdiffusion_env.sh"
+
+mkdir -p "${WORKINGDIR}" "${INPUT_DIR}" "${STRUCT}"
+
+<% if context.bc_email_on_started == "1" %>
+# Add all emails if checked
+scontrol update jobid=$SLURM_JOBID MailType=ALL
+<% end %>
+    
+<%- if context.session_type == "RFdiffusion" -%>
+
+# RFdiffusion
+export PDB_FILE="${INPUT_DIR}/input.pdb"
+echo '<%= context.protein_sequence.to_s %>' > "${PDB_FILE}"
+echo "Debug: Created PDB file at ${PDB_FILE}"
+
+echo "Starting RFdiffusion process"
+source ./rfdiffusion.sh "${PDB_FILE}" "$WORKINGDIR" "<%= context.auto_accounts %>" "$STATUS_FILE"
+
+<%- end -%>

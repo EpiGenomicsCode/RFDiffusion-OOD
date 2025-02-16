@@ -1,0 +1,37 @@
+<% 
+# Initialize and assign variables
+status_data = {}
+cpu_job_id = gpu_job_id = run_dir = input_dir = struct = logdir = cpu_log_file = gpu_log_file = "-"
+
+# Check if connection.yml file exists (connect API)
+if File.exist?(staged_root.join('connection.yml')) 
+  cpu_job_id = connect.CPU_JOB_ID
+  gpu_job_id = connect.GPU_JOB_ID
+  run_dir = connect.RUN_DIR
+  input_dir = connect.INPUT_DIR
+  struct = connect.STRUCT
+  logdir = connect.LOGDIR
+  cpu_log_file = connect.CPU_LOG_FILE
+  gpu_log_file = connect.GPU_LOG_FILE
+
+  # Read status.json file
+  status_file_path = File.join(staged_root, connect.STATUS_FILE)
+  status_data = JSON.parse(File.read(status_file_path)) if File.exist?(status_file_path)
+end
+%>
+
+<div class="alert alert-info" >
+  <h5>Completion Information</h5>
+  <p><strong>Run Directory: </strong>
+    <a href="/pun/sys/dashboard/files/fs<%= run_dir %>" target="_blank">
+      <%= run_dir %>
+      <i class="fa fa-external-link"></i>
+    </a>
+  </p>
+  <p><strong>Structure Directory: </strong>
+  <a href="/pun/sys/dashboard/files/fs<%= struct %>" target="_blank">
+    <%= struct %>
+    <i class="fa fa-external-link"></i>
+  </a>
+</p>
+</div>

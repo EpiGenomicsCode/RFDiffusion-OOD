@@ -1,0 +1,27 @@
+<%-
+  case session_type     
+  when "ESMFold"
+      slurm_args = ["--nodes", "1", "--ntasks-per-node", "1", "--cpus-per-task", "1", "--gpus", "1", "--partition", "sla-prio,burst"]
+  else
+      slurm_args = ["--account", "open", "--partition", "open"]
+  end    
+-%>
+---
+batch_connect:
+  template: "basic"
+  conn_params:
+    - BC_EMAIL_ON_STARTED
+    - CPU_JOB_ID
+    - GPU_JOB_ID
+    - RUN_DIR
+    - STATUS_FILE
+    - INPUT_DIR
+    - STRUCT
+    - LOGDIR
+    - CPU_LOG_FILE
+    - GPU_LOG_FILE
+script:
+  native:
+    <%- slurm_args.each do |arg| -%>
+      - "<%= arg %>"
+    <%- end -%>
